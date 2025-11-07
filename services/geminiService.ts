@@ -8,15 +8,27 @@ const textModel = 'gemini-2.5-pro';
 async function executeWithRetry<T>(
     apiCall: (ai: GoogleGenAI) => Promise<T>
 ): Promise<T> {
-    // Prioritize environment variable
-    const envApiKey = process.env.API_KEY;
-    if (envApiKey) {
+    // 1. Prioritize billing API key from environment variable
+    const billingApiKey = import.meta.env.VITE_GEMINI_BILLING_API_KEY;
+    if (billingApiKey && billingApiKey !== 'PLACEHOLDER_BILLING_API_KEY') {
         try {
-            const ai = new GoogleGenAI({ apiKey: envApiKey });
+            const ai = new GoogleGenAI({ apiKey: billingApiKey });
+            console.log("Using billing API key.");
             return await apiCall(ai);
         } catch (error) {
-            console.error("API Key from environment variable failed.", error);
-            throw new Error("API Key được cung cấp qua biến môi trường không hợp lệ hoặc đã hết hạn.");
+            console.error("Billing API Key from environment variable failed. Falling back.", error);
+        }
+    }
+
+    // 2. Fallback to free API key from environment variable
+    const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (envApiKey && envApiKey !== 'PLACEHOLDER_API_KEY') {
+        try {
+            const ai = new GoogleGenAI({ apiKey: envApiKey });
+            console.log("Using free API key from environment variable.");
+            return await apiCall(ai);
+        } catch (error) {
+            console.error("Free API Key from environment variable failed. Falling back.", error);
         }
     }
 
@@ -195,21 +207,3 @@ export const changeExpression = async (image: UploadedImage, expressionPrompt: s
   });
 };
 
-const GEMINI_BILLING_API_KEY = process.env.GEMINI_BILLING_API_KEY;
-
-export const callBillingAPI = async (endpoint: string, data: any) => {
-    const response = await fetch(`https://api.gemini.com/${endpoint}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GEMINI_BILLING_API_KEY}`,
-        },
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        throw new Error(`Billing API error: ${response.statusText}`);
-    }
-
-    return response.json();
-};
