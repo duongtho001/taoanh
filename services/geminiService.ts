@@ -194,3 +194,22 @@ export const changeExpression = async (image: UploadedImage, expressionPrompt: s
     return extractBase64Image(response);
   });
 };
+
+const GEMINI_BILLING_API_KEY = process.env.GEMINI_BILLING_API_KEY;
+
+export const callBillingAPI = async (endpoint: string, data: any) => {
+    const response = await fetch(`https://api.gemini.com/${endpoint}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GEMINI_BILLING_API_KEY}`,
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Billing API error: ${response.statusText}`);
+    }
+
+    return response.json();
+};
